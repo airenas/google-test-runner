@@ -2,7 +2,7 @@
 
 ## Intro
 
-It is a simple tools to run many googletest suits (separat executables) and collect overall statistics.
+It is a simple tools to run many googletest suits (separate executables) and collect overall statistics.
 
 ## Why
 
