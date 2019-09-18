@@ -13,8 +13,9 @@ var red = color.FgRed.Render
 var green = color.FgGreen.Render
 
 type formatterWriter struct {
-	writer         io.Writer
-	showOnlyFailed bool
+	writer          io.Writer
+	showOnlyFailed  bool
+	showGTestOutput bool
 }
 
 type stats struct {
@@ -25,8 +26,8 @@ type stats struct {
 	succeded        int
 }
 
-func newFormatterWriter(w io.Writer, showOnlyFailed bool) *formatterWriter {
-	return &formatterWriter{writer: w, showOnlyFailed: showOnlyFailed}
+func newFormatterWriter(w io.Writer, showOnlyFailed bool, showGTestOutput bool) *formatterWriter {
+	return &formatterWriter{writer: w, showOnlyFailed: showOnlyFailed, showGTestOutput: showGTestOutput}
 }
 
 //
@@ -85,8 +86,21 @@ func (f *formatterWriter) ShowSuiteStart(file string) {
 	fmt.Fprintf(f.writer, "%s Starting %s\n", green("[==========]"), file)
 }
 
-func (f *formatterWriter) ShowSuiteFailure(file string, err error) {
+func (f *formatterWriter) ShowSuiteFailure(file string, output string, err error) {
+	f.printGTestOutput(output)
 	fmt.Fprintf(f.writer, "%s File failed: %s\n%s\n", red("[  FAILED  ]"), file, err.Error())
+}
+
+func (f *formatterWriter) printGTestOutput(output string) {
+	if f.showGTestOutput {
+		fmt.Fprintf(f.writer, "\n\n\n<<<<<<<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>>>\n")
+		fmt.Fprintf(f.writer, "<<<<<<<<< START GTEST OUTPUT >>>>>>>>>\n")
+		fmt.Fprintf(f.writer, "<<<<<<<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>>>\n\n")
+		fmt.Fprintf(f.writer, "%s\n", output)
+		fmt.Fprintf(f.writer, "<<<<<<<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>>>\n")
+		fmt.Fprintf(f.writer, "<<<<<<<<<< END GTEST OUTPUT >>>>>>>>>>\n")
+		fmt.Fprintf(f.writer, "<<<<<<<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>>>\n\n\n")
+	}
 }
 
 // [----------] 2 tests from Accenter
@@ -95,7 +109,8 @@ func (f *formatterWriter) ShowSuiteFailure(file string, err error) {
 // [ RUN      ] Accenter.fail_init
 // [       OK ] Accenter.fail_init (0 ms)
 // [----------] 2 tests from Accenter (244 ms total)
-func (f *formatterWriter) ShowTests(data *google.TestResult) {
+func (f *formatterWriter) ShowTests(data *google.TestResult, output string) {
+	f.printGTestOutput(output)
 	for _, ts := range data.Testsuites {
 		fmt.Fprintf(f.writer, "%s %d test%s from %s\n", green("[----------]"), len(ts.Testsuite), sOrEmpty(len(ts.Testsuite)), ts.Name)
 		for _, t := range ts.Testsuite {

@@ -12,8 +12,8 @@ type reader interface {
 
 type formatter interface {
 	ShowSuiteStart(string)
-	ShowSuiteFailure(string, error)
-	ShowTests(*google.TestResult)
+	ShowSuiteFailure(string, string, error)
+	ShowTests(*google.TestResult, string)
 	ShowStatistics([]*google.TestResult)
 }
 
@@ -38,14 +38,14 @@ func Run(config *Settings) {
 			defer tasksWg.Done()
 			defer func() { <-wLimit }()
 
-			gr, err := runGoogleTest(file, config.workingDir)
+			gr, output, err := runGoogleTest(file, config.workingDir)
 			if err != nil {
-				config.formatter.ShowSuiteFailure(file, err)
+				config.formatter.ShowSuiteFailure(file, output, err)
 			} else {
 				resMutex.Lock()
 				defer resMutex.Unlock()
 				res = append(res, gr)
-				config.formatter.ShowTests(gr)
+				config.formatter.ShowTests(gr, output)
 			}
 		}(line)
 	}

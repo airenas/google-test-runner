@@ -12,32 +12,32 @@ import (
 	"github.com/pkg/errors"
 )
 
-func runGoogleTest(f string, wDir string) (*google.TestResult, error) {
+func runGoogleTest(f string, wDir string) (*google.TestResult, string, error) {
 	file, err := ioutil.TempFile("", "google_test_runner")
 	if err != nil {
-		return nil, errors.Wrap(err, "Can't create temp file ")
+		return nil, "", errors.Wrap(err, "Can't create temp file ")
 	}
 	defer os.Remove(file.Name())
 
 	cmd := f + " --gtest_output=json:" + file.Name()
-	errCmd := runCommand(cmd, wDir)
+	output, errCmd := runCommand(cmd, wDir)
 	gr, err := readJSON(file.Name())
 	if err != nil {
-		return nil, errors.Wrap(errCmd, errors.Wrap(err, "Can't decode json.\n").Error())
+		return nil, output, errors.Wrap(errCmd, errors.Wrap(err, "Can't decode json.\n").Error())
 	}
-	return gr, nil
+	return gr, output, nil
 }
 
-func runCommand(command string, wDir string) error {
+func runCommand(command string, wDir string) (string, error) {
 	cmdArr := strings.Split(command, " ")
 	cmd := exec.Command(cmdArr[0], cmdArr[1:]...)
 	cmd.Dir = wDir
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		errR := errors.Wrap(err, string(output))
-		return errR
+		return string(output), errR
 	}
-	return nil
+	return string(output), nil
 }
 
 func readJSON(fn string) (*google.TestResult, error) {

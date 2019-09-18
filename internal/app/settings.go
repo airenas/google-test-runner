@@ -22,6 +22,7 @@ func InitSettings() (*Settings, error) {
 	workingDirPtr := flag.String("d", "./", "Working dir: Sample: -d ./")
 	wCount := flag.Int("j", 4, "Workers count to run in parallel. Allowed value: [1, 99]. Sample -j 4")
 	onlyFailed := flag.Bool("s", false, "Show only failed test cases")
+	showGTestOutput := flag.Bool("o", false, "Show original GTest output")
 	flag.Parse()
 	result := Settings{}
 	result.workingDir = *workingDirPtr
@@ -30,7 +31,7 @@ func InitSettings() (*Settings, error) {
 	if err != nil {
 		return nil, err
 	}
-	result.formatter = newFormatterWriter(os.Stdout, *onlyFailed)
+	result.formatter = newFormatterWriter(os.Stdout, *onlyFailed, *showGTestOutput)
 	result.showOnlyFailed = *onlyFailed
 	result.workersCount = *wCount
 
