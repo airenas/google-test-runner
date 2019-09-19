@@ -34,7 +34,7 @@ Run `google-test-runner -h` for a help.
 
  * Standard: `find . -type f -name '*_test' | google-test-runner`
  * Filter as parameter: `google-test-runner -f ./**/**/*_test`
- * Show only failing tests: `google-test-runner -s -f ./**/**/*_test`
+ * Show only failing tests: `google-test-runner -o f -f ./**/**/*_test`
  * One worker: `google-test-runner -j 1 -s -f ./**/**/*_test`
 
 ---

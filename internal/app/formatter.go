@@ -3,6 +3,7 @@ package app
 import (
 	"fmt"
 	"io"
+	"strings"
 	"time"
 
 	"github.com/airenas/google-test-runner/internal/app/google"
@@ -13,9 +14,13 @@ var red = color.FgRed.Render
 var green = color.FgGreen.Render
 
 type formatterWriter struct {
-	writer          io.Writer
-	showOnlyFailed  bool
-	showGTestOutput bool
+	writer            io.Writer
+	showOnlyFailed    bool
+	showGTestOutput   bool
+	skipTestSuites    bool
+	skipTestCaseStart bool
+	skipTestCases     bool
+	skipTestStart     bool
 }
 
 type stats struct {
@@ -26,8 +31,15 @@ type stats struct {
 	succeded        int
 }
 
-func newFormatterWriter(w io.Writer, showOnlyFailed bool, showGTestOutput bool) *formatterWriter {
-	return &formatterWriter{writer: w, showOnlyFailed: showOnlyFailed, showGTestOutput: showGTestOutput}
+func newFormatterWriter(w io.Writer, formatInfo string) *formatterWriter {
+	result := &formatterWriter{writer: w}
+	result.showOnlyFailed = strings.Contains(formatInfo, "f")
+	result.showGTestOutput = strings.Contains(formatInfo, "o")
+	result.skipTestSuites = strings.Contains(formatInfo, "s")
+	result.skipTestCaseStart = strings.Contains(formatInfo, "a")
+	result.skipTestCases = strings.Contains(formatInfo, "c")
+	result.skipTestStart = strings.Contains(formatInfo, "t")
+	return result
 }
 
 //
@@ -83,7 +95,9 @@ func durationAsStr(i time.Duration) string {
 }
 
 func (f *formatterWriter) ShowSuiteStart(file string) {
-	fmt.Fprintf(f.writer, "%s Starting %s\n", green("[==========]"), file)
+	if !f.skipTestSuites {
+		fmt.Fprintf(f.writer, "%s Starting %s\n", green("[==========]"), file)
+	}
 }
 
 func (f *formatterWriter) ShowSuiteFailure(file string, output string, err error) {
@@ -112,11 +126,15 @@ func (f *formatterWriter) printGTestOutput(output string) {
 func (f *formatterWriter) ShowTests(data *google.TestResult, output string) {
 	f.printGTestOutput(output)
 	for _, ts := range data.Testsuites {
-		fmt.Fprintf(f.writer, "%s %d test%s from %s\n", green("[----------]"), len(ts.Testsuite), sOrEmpty(len(ts.Testsuite)), ts.Name)
+		if !(f.skipTestCases || f.skipTestCaseStart) {
+			fmt.Fprintf(f.writer, "%s %d test%s from %s\n", green("[----------]"), len(ts.Testsuite), sOrEmpty(len(ts.Testsuite)), ts.Name)
+		}
 		for _, t := range ts.Testsuite {
 			if len(t.Failures) == 0 {
 				if !f.showOnlyFailed {
-					fmt.Fprintf(f.writer, "%s %s.%s\n", green("[ RUN      ]"), ts.Name, t.Name)
+					if !f.skipTestStart {
+						fmt.Fprintf(f.writer, "%s %s.%s\n", green("[ RUN      ]"), ts.Name, t.Name)
+					}
 					fmt.Fprintf(f.writer, "%s %s.%s (%s)\n", green("[       OK ]"), ts.Name, t.Name, t.Time)
 				}
 			} else {
@@ -128,7 +146,9 @@ func (f *formatterWriter) ShowTests(data *google.TestResult, output string) {
 			}
 
 		}
-		fmt.Fprintf(f.writer, "%s %d test%s from %s (%s total)\n", green("[----------]"), len(ts.Testsuite), sOrEmpty(len(ts.Testsuite)), ts.Name,
-			ts.Time)
+		if !f.skipTestCases {
+			fmt.Fprintf(f.writer, "%s %d test%s from %s (%s total)\n", green("[----------]"), len(ts.Testsuite), sOrEmpty(len(ts.Testsuite)), ts.Name,
+				ts.Time)
+		}
 	}
 }

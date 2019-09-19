@@ -21,8 +21,15 @@ func InitSettings() (*Settings, error) {
 	filterPtr := flag.String("f", "", "Filter to search recursivelly for files in current dir. Sample: -f ./**/*_test")
 	workingDirPtr := flag.String("d", "./", "Working dir: Sample: -d ./")
 	wCount := flag.Int("j", 4, "Workers count to run in parallel. Allowed value: [1, 99]. Sample -j 4")
-	onlyFailed := flag.Bool("s", false, "Show only failed test cases")
-	showGTestOutput := flag.Bool("o", false, "Show original GTest output")
+	outputFormat := flag.String("o", "", `<format> - Output format symbols:
+			f - show only failed tests
+			o - show original GTest output
+			s - skip test suite info
+			a - skip test case start
+			c - skip test case info
+			t - skip test start info
+			`)
+	minimalisticFormat := flag.Bool("m", false, "Minimalistic output format. Corresponds to -o=fsat")
 	flag.Parse()
 	result := Settings{}
 	result.workingDir = *workingDirPtr
@@ -31,8 +38,13 @@ func InitSettings() (*Settings, error) {
 	if err != nil {
 		return nil, err
 	}
-	result.formatter = newFormatterWriter(os.Stdout, *onlyFailed, *showGTestOutput)
-	result.showOnlyFailed = *onlyFailed
+	if *outputFormat != "" && *minimalisticFormat {
+		return nil, errors.New("Only m or o parameter allowed, not both")
+	}
+	if *minimalisticFormat {
+		*outputFormat = "fsat"
+	}
+	result.formatter = newFormatterWriter(os.Stdout, *outputFormat)
 	result.workersCount = *wCount
 
 	if result.workersCount < 1 || result.workersCount > 100 {

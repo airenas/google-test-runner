@@ -11,16 +11,25 @@ import (
 
 func TestShowSuiteStart(t *testing.T) {
 	sw := bytes.NewBufferString("")
-	f := newFormatterWriter(sw, false, false)
+	f := newFormatterWriter(sw, "")
 
 	f.ShowSuiteStart("file")
 
 	assert.Equal(t, "\x1b[32m[==========]\x1b[0m Starting file\n", sw.String())
 }
 
+func TestShowSuiteStart_Skip(t *testing.T) {
+	sw := bytes.NewBufferString("")
+	f := newFormatterWriter(sw, "s")
+
+	f.ShowSuiteStart("file")
+
+	assert.NotContains(t, sw.String(), "Starting file")
+}
+
 func TestShowSuite_Failure(t *testing.T) {
 	sw := bytes.NewBufferString("")
-	f := newFormatterWriter(sw, false, false)
+	f := newFormatterWriter(sw, "")
 
 	f.ShowSuiteFailure("file", "", errors.New("error"))
 
@@ -29,7 +38,7 @@ func TestShowSuite_Failure(t *testing.T) {
 
 func TestShowSuite_FailureOutput(t *testing.T) {
 	sw := bytes.NewBufferString("")
-	f := newFormatterWriter(sw, false, true)
+	f := newFormatterWriter(sw, "o")
 
 	f.ShowSuiteFailure("file", "Output", errors.New("error"))
 
@@ -38,7 +47,7 @@ func TestShowSuite_FailureOutput(t *testing.T) {
 
 func TestShowTests_AllPassed(t *testing.T) {
 	sw := bytes.NewBufferString("")
-	f := newFormatterWriter(sw, false, false)
+	f := newFormatterWriter(sw, "")
 
 	data := makeData()
 
@@ -49,9 +58,31 @@ func TestShowTests_AllPassed(t *testing.T) {
 	assert.Contains(t, sw.String(), "OK")
 }
 
+func TestShowTests_SkipCasesStart(t *testing.T) {
+	sw := bytes.NewBufferString("")
+	f := newFormatterWriter(sw, "a")
+
+	data := makeData()
+
+	f.ShowTests(data, "")
+
+	assert.NotContains(t, sw.String(), "from olia\n")
+}
+
+func TestShowTests_SkipCases(t *testing.T) {
+	sw := bytes.NewBufferString("")
+	f := newFormatterWriter(sw, "c")
+
+	data := makeData()
+
+	f.ShowTests(data, "")
+
+	assert.NotContains(t, sw.String(), "from olia")
+}
+
 func TestShowTests_Output(t *testing.T) {
 	sw := bytes.NewBufferString("")
-	f := newFormatterWriter(sw, false, true)
+	f := newFormatterWriter(sw, "o")
 
 	data := makeData()
 
@@ -62,7 +93,7 @@ func TestShowTests_Output(t *testing.T) {
 
 func TestShowTests_AllPassed_Skip(t *testing.T) {
 	sw := bytes.NewBufferString("")
-	f := newFormatterWriter(sw, true, false)
+	f := newFormatterWriter(sw, "f")
 
 	data := makeData()
 
@@ -73,9 +104,17 @@ func TestShowTests_AllPassed_Skip(t *testing.T) {
 	assert.NotContains(t, sw.String(), "OK")
 }
 
+func TestShowTests_SkipStart(t *testing.T) {
+	sw := bytes.NewBufferString("")
+	f := newFormatterWriter(sw, "t")
+	data := makeData()
+	f.ShowTests(data, "")
+	assert.NotContains(t, sw.String(), "RUN")
+}
+
 func TestShowTests_Failure(t *testing.T) {
 	sw := bytes.NewBufferString("")
-	f := newFormatterWriter(sw, true, false)
+	f := newFormatterWriter(sw, "f")
 
 	data := makeData()
 	data.Testsuites[0].Testsuite[0].Failures = make([]google.Failure, 1)
@@ -89,7 +128,7 @@ func TestShowTests_Failure(t *testing.T) {
 
 func TestShowStatistics_AllPass(t *testing.T) {
 	sw := bytes.NewBufferString("")
-	f := newFormatterWriter(sw, true, false)
+	f := newFormatterWriter(sw, "f")
 
 	data := []*google.TestResult{makeData(), makeData()}
 
@@ -102,7 +141,7 @@ func TestShowStatistics_AllPass(t *testing.T) {
 
 func TestShowStatistics_Failed(t *testing.T) {
 	sw := bytes.NewBufferString("")
-	f := newFormatterWriter(sw, true, false)
+	f := newFormatterWriter(sw, "f")
 
 	data := []*google.TestResult{makeData(), makeData()}
 	data[0].Testsuites[0].Testsuite[0].Failures = make([]google.Failure, 1)
