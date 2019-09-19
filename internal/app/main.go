@@ -29,14 +29,15 @@ func Run(config *Settings) {
 
 	var tasksWg sync.WaitGroup
 	tasksWg.Add(len(fileNames))
-	wLimit := make(chan bool, config.workersCount)
+	workerQueueLimit := make(chan bool, config.workersCount) 
 
 	for _, line := range fileNames {
-		wLimit <- true
+		workerQueueLimit <- true // try get access to work
 		go func(file string) {
-			config.formatter.ShowSuiteStart(file)
 			defer tasksWg.Done()
-			defer func() { <-wLimit }()
+			defer func() { <-workerQueueLimit }() // decrease working queue
+
+			config.formatter.ShowSuiteStart(file)
 
 			gr, output, err := runGoogleTest(file, config.workingDir)
 			if err != nil {
@@ -51,5 +52,6 @@ func Run(config *Settings) {
 	}
 
 	tasksWg.Wait()
+
 	config.formatter.ShowStatistics(res)
 }
