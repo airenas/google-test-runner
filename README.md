@@ -20,7 +20,7 @@ Before: You must have [go](https://golang.org/) >= 1.12 installed.
 
 2) Build `cd google-test-runner/cmd/google-test-runner && go build`
 
-3) Copy somewhere on your path `sudo cp google-test-runner /usr/local/bin`
+3) Copy executable somewhere on your path `sudo cp google-test-runner /usr/local/bin`
 
 ## Usage
 
@@ -33,9 +33,9 @@ Run `google-test-runner -h` for a help.
 3) Invoke the tests:
 
  * Standard: `find . -type f -name '*_test' | google-test-runner`
- * Filter as parameter: `google-test-runner -f ./**/**/*_test`
- * Show only failing tests: `google-test-runner -o f -f ./**/**/*_test`
- * One worker: `google-test-runner -j 1 -s -f ./**/**/*_test`
+ * Filter as parameter: `google-test-runner -f ./**/*_test`
+ * Show only failing tests: `google-test-runner -o f -f ./**/*_test`
+ * One worker: `google-test-runner -j 1 -s -f ./**/*_test`
 
 ---
 
