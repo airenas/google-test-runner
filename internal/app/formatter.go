@@ -12,6 +12,7 @@ import (
 
 var red = color.FgRed.Render
 var green = color.FgGreen.Render
+var warn = color.FgYellow.Darken().Render
 
 type formatterWriter struct {
 	writer            io.Writer
@@ -24,11 +25,12 @@ type formatterWriter struct {
 }
 
 type stats struct {
-	allTest         int
+	allRunTest      int
 	allTestDuration time.Duration
 	allSuits        int
-	failed          int
 	succeded        int
+	disabled        int
+	failedNames     []string
 }
 
 func newFormatterWriter(w io.Writer, formatInfo string) *formatterWriter {
@@ -51,36 +53,51 @@ func newFormatterWriter(w io.Writer, formatInfo string) *formatterWriter {
 // [  FAILED  ] AccenterTest.accent_fill_from_verb2
 // [  FAILED  ] AccenterTest.accent_auklejamasis
 func (f *formatterWriter) ShowStatistics(data []*google.TestResult) {
-	st := stats{}
-	failed := make([]string, 0)
-	for _, gt := range data {
-		for _, ts := range gt.Testsuites {
-			st.allSuits++
-			d, _ := time.ParseDuration(ts.Time)
-			st.allTestDuration = st.allTestDuration + d
-			for _, t := range ts.Testsuite {
-				st.allTest++
-				if len(t.Failures) == 0 {
-					st.succeded++
-				} else {
-					st.failed++
-					failed = append(failed, ts.Name+"."+t.Name)
-				}
+	f.showStatistics(collectStatistics(data))
+}
 
-			}
-		}
-	}
+func (f *formatterWriter) showStatistics(st *stats) {
 	fmt.Fprintf(f.writer, "\n%s %d test%s from %d test case%s ran. (%s total)\n", green("[==========]"),
-		st.allTest, sOrEmpty(st.allTest), st.allSuits, sOrEmpty(st.allSuits), durationAsStr(st.allTestDuration))
+		st.allRunTest, sOrEmpty(st.allRunTest), st.allSuits, sOrEmpty(st.allSuits), durationAsStr(st.allTestDuration))
 	if st.succeded > 0 {
 		fmt.Fprintf(f.writer, "%s %d test%s\n", green("[  PASSED  ]"), st.succeded, sOrEmpty(st.succeded))
 	}
-	if st.failed > 0 {
-		fmt.Fprintf(f.writer, "%s %d test%s, listed below:\n", red("[  FAILED  ]"), st.failed, sOrEmpty(st.failed))
+	failed := len(st.failedNames)
+	if failed > 0 {
+		fmt.Fprintf(f.writer, "%s %d test%s, listed below:\n", red("[  FAILED  ]"), failed, sOrEmpty(failed))
 	}
-	for _, ft := range failed {
+	for _, ft := range st.failedNames {
 		fmt.Fprintf(f.writer, "%s %s\n", red("[  FAILED  ]"), ft)
 	}
+	//	YOU HAVE 1 DISABLED TEST
+	if st.disabled > 0 {
+		str := fmt.Sprintf("    YOU HAVE %d DISABLED TEST%s", st.disabled, strings.Title(sOrEmpty(st.disabled)))
+		fmt.Fprintf(f.writer, "\n%s\n\n", warn(str))
+	}
+}
+
+func collectStatistics(data []*google.TestResult) *stats {
+	res := stats{}
+	for _, gt := range data {
+		for _, ts := range gt.Testsuites {
+			res.allSuits++
+			d, _ := time.ParseDuration(ts.Time)
+			res.allTestDuration = res.allTestDuration + d
+			for _, t := range ts.Testsuite {
+				if t.Status == "NOTRUN" {
+					res.disabled++
+				} else {
+					res.allRunTest++
+					if len(t.Failures) == 0 {
+						res.succeded++
+					} else {
+						res.failedNames = append(res.failedNames, ts.Name+"."+t.Name)
+					}
+				}
+			}
+		}
+	}
+	return &res
 }
 
 func sOrEmpty(i int) string {

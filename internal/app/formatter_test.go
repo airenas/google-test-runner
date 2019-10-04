@@ -154,6 +154,64 @@ func TestShowStatistics_Failed(t *testing.T) {
 	assert.Contains(t, sw.String(), "FAILED")
 }
 
+func TestShow_NoDisabled(t *testing.T) {
+	sw := bytes.NewBufferString("")
+	f := newFormatterWriter(sw, "f")
+	data := stats{}
+	data.disabled = 0
+	f.showStatistics(&data)
+	assert.NotContains(t, sw.String(), "DISABLED")
+}
+
+func TestShow_Disabled(t *testing.T) {
+	sw := bytes.NewBufferString("")
+	f := newFormatterWriter(sw, "f")
+	data := stats{}
+	data.disabled = 1
+	f.showStatistics(&data)
+	assert.Contains(t, sw.String(), "DISABLED TEST")
+	assert.NotContains(t, sw.String(), "DISABLED TESTS")
+}
+
+func TestShow_DisabledPlural(t *testing.T) {
+	sw := bytes.NewBufferString("")
+	f := newFormatterWriter(sw, "f")
+	data := stats{}
+	data.disabled = 2
+	f.showStatistics(&data)
+	assert.Contains(t, sw.String(), "DISABLED TESTS")
+}
+
+func TestCollectStatistics_Disabled(t *testing.T) {
+	data := []*google.TestResult{makeData(), makeData()}
+	data[0].Testsuites[0].Testsuite[0].Status = "NOTRUN"
+	data[1].Testsuites[0].Testsuite[0].Status = "NOTRUN"
+	stats := collectStatistics(data)
+	assert.Equal(t, 2, stats.disabled)
+	assert.Equal(t, 0, stats.allRunTest)
+}
+
+func TestCollectStatistics_NoDisabled(t *testing.T) {
+	data := []*google.TestResult{makeData(), makeData()}
+	stats := collectStatistics(data)
+	assert.Equal(t, 0, stats.disabled)
+}
+
+func TestCollectStatistics_AllRunTest(t *testing.T) {
+	data := []*google.TestResult{makeData(), makeData()}
+	data[0].Testsuites[0].Testsuite[0].Status = "NOTRUN"
+	data[1].Testsuites[0].Testsuite[0].Status = "RUN"
+	stats := collectStatistics(data)
+	assert.Equal(t, 1, stats.allRunTest)
+}
+
+func TestCollectStatistics_Failed(t *testing.T) {
+	data := []*google.TestResult{makeData(), makeData()}
+	data[0].Testsuites[0].Testsuite[0].Failures = make([]google.Failure, 1)
+	stats := collectStatistics(data)
+	assert.Equal(t, 1, len(stats.failedNames))
+}
+
 func makeData() *google.TestResult {
 	data := google.TestResult{}
 	data.Testsuites = make([]google.TestResult, 1)
